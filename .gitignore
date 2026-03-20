@@ -2,3 +2,5 @@ assets/session/*
 
 src/database/users/*.json
 dist/database/users/*.json
+
+.env

@@ -38,6 +38,8 @@ atendimento -> quando quer falar com humano ou suporte direto
 horarios -> quando pergunta sobre horário de funcionamento
 localizacao -> quando pergunta endereço ou localização
 
+confirmacao -> quando usuário manda algo genérico, mas que parece uma confimação como: "tá bom", "ok", "tá legal"
+
 generico -> quando não tem relação com escola ou não é possível identificar
 
 IMPORTANTE:
@@ -166,6 +168,10 @@ export class GeminiAI {
                 error?.status === 403
             ) {
                 return "api_key_invalid";
+            }
+
+            if(error?.status === 429){
+                return 'limit_exceeded'
             }
 
             return "generico";

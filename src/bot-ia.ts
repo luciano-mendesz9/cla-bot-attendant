@@ -1,15 +1,15 @@
 import { AdminMenu } from './utils/menus/admin-menu.js';
 import path from "path";
 import fs from 'fs';
-import { AdminConfigType, BOT_NAME, PREFIX, __dirname, getAdminsPhoneNumbers } from "./config.js";
+import { AdminConfigType, BOT_NAME, DEVELOPER_PHONE_NUMBER, PREFIX, __dirname, getAdminsPhoneNumbers } from "./config.js";
 import ConnectionBot from "./connection.js";
 import UserDataFileManager from "./utils/classes/UserDataFileManager.js";
-import { delay, validatePhone } from "./utils/functions/index.js";
+import { delay, removeItemStringArray, validatePhone } from "./utils/functions/index.js";
 import { getJsonData, updateJson } from "./utils/functions/json-manager.js";
-import { InitialMenu } from "./utils/menus/initial-menu.js";
 import { GeminiAI } from './utils/services/gemini.service.js';
 
 const cacheUserData: { lid: string, username: string }[] = [];
+let waitingList: string[] = [];
 
 async function start() {
     const bot = await ConnectionBot();
@@ -30,6 +30,7 @@ async function start() {
 
         const message = msg.message.extendedTextMessage?.text || msg.message.conversation;
 
+        if (waitingList.includes(fromLid as string)) return;
         if (!fromJid && !fromLid || !message) return;
 
         if (msg.key.fromMe && (message?.toLocaleLowerCase() === 'bom dia' || message?.toLocaleLowerCase() === 'boa tarde' || message?.toLocaleLowerCase() === 'boa noite')) {
@@ -81,6 +82,16 @@ async function start() {
                 console.log(error);
             }
         };
+
+        const sendReact = async (emoji: string) => {
+            await bot.sendMessage(fromLid as string, {
+                react: {
+                    key: msg.key,
+                    text: emoji
+                }
+            });
+        }
+
 
         if (isAdminCommand) {
 
@@ -183,36 +194,157 @@ async function start() {
             });
 
             await sendTextMessage({
-                text: 'Como posso te ajuda?\n> *Obs:* Envie somente mensagem de texto para interagir com o ' + BOT_NAME + ' e 1 por vez.'
+                text: 'Como posso te ajudar?\n\n> *Obs:* Envie somente mensagem de texto para interagir com o ' + BOT_NAME + ' e 1 por vez.'
             });
             return;
         }
 
+        const firstName = user.username?.split(' ')[0];
         async function askAttendant() {
-            sendTextMessage({ text: 'Entendido!! Estou te redirecionando para um atendente humano...\n\n> *Atenção:* isso pode levar alguns minutos. Aguarde a mensagem de um atendente.' });
+            sendTextMessage({ text: 'Estou te redirecionando para um atendente humano...\n\n> *Atenção:* isso pode levar alguns minutos. Aguarde a mensagem de um atendente.' });
 
             const randomAttendant = attendants_list[Math.floor(Math.random() * attendants_list.length)];
-            cacheUserData.push({ lid: fromLid as string, username: user?.username as string });
+            cacheUserData.push({ lid: fromLid as string, username: firstName as string });
 
-            await bot.sendMessage(`${randomAttendant}@s.whatsapp.net`, { text: `*🗃️ PEDIDO DE ATENDIMENTO*\n\nNome: ${user?.username as string}\nNúmero: ${fromJid?.split('@')[0]}\n\n> *Atenção:* Abra este contato no número do *${BOT_NAME}* e responda-o.\n\n> ⚠️ *IMPORTANTE:* Ao finalizar o atendimento, envie: *"Atendimento finalizado"* (exatamente assim) no privado do cliente, para que o Bot saiba.` })
-            DATA_CLIENTS.updateUserData(fromLid as string, { step: 'HUMAN_SERVICE', username: user?.username as string });
+            await bot.sendMessage(`${randomAttendant}@s.whatsapp.net`, { text: `*🗃️ PEDIDO DE ATENDIMENTO*\n\nNome: ${firstName as string}\nNúmero: ${fromJid?.split('@')[0]}\n\n> *Atenção:* Abra este contato no número do *${BOT_NAME}* e responda-o.\n\n> ⚠️ *IMPORTANTE:* Ao finalizar o atendimento, envie: *"Atendimento finalizado"* (exatamente assim) no privado do cliente, para que o Bot saiba.` })
+            DATA_CLIENTS.updateUserData(fromLid as string, { step: 'HUMAN_SERVICE', username: firstName as string });
         }
 
+        const sendResponseRule = async () => {
+            await sendTextMessage({ text: '> Envie 1 mensagem e aguarde pela resposta.' });
+        }
+
+        const priceInquiryMessage = async () => {
+            await sendTextMessage({ text: `Se precisar consultar preços, posso solicitar uma assistêcia humana para você, ${firstName}, basta enviar *"Quero um atendente"*` })
+        }
+
+        await bot.readMessages([msg.key]);
+        await delay(500);
+        await sendReact('⏳')
+
+        waitingList.push(fromLid as string);
         const userIntent = await ia.response(message);
 
+        await delay(500);
+        await sendReact('');
+
+
         switch (userIntent) {
+            case 'mensagem_inicial':
+                await sendImageMessage({
+                    caption: `Olá, Eu sou *${BOT_NAME}*, o mais novo assistente virtual do Colégio Leonel Amorim 😉`,
+                    filename: 'banner.png'
+                });
+                await sendTextMessage({ text: 'Como posso te ajudar?' });
+                break;
             case 'matricula':
-                await sendTextMessage({ text: 'Ah, você quer saber sobre as matrículas' })
+                await sendTextMessage({ text: 'Nossas turmas são do fundamental, sendo:' });
+                await sendTextMessage({ text: '- 1° ano ao 5° ano (Matutino)\n- 6° ano ao 9° ano (Vespertino)' });
+                await sendTextMessage({ text: 'Quer saber sobre alguma turma específica? Se sim, qual delas?' });
+                await sendResponseRule();
                 break;
             case 'paceiros':
-                await sendTextMessage({ text: 'Ah, você quer saber sobre os parceiros' })
+                await sendTextMessage({
+                    text: `${user.username?.split(' ')[0] || 'Bom'}, aqui no Colégio Leonel Amorim, temos parceirias incríveis 😲!`
+                });
+                await sendTextMessage({
+                    text: `*FTD:*\n- Nos proporciona livros didáticos para imergir nossos alunos no mundo do conhecimento\n\n*Árvore:*\n- Estímulo ao mundo literário! Seu filho autor e escritor\n\n*Zoom Education:*\n- O futuro chegou e nós do CLA estamos acompanhando de perto essas incríveis mudanças. Por isso, agora, seu filho terá acesso a aulas de *ROBÓTICA!*`
+                });
+
+                await sendTextMessage({ text: 'Inovação e Desenvolvimento em um só lugar!' });
+                await sendTextMessage({
+                    text: `> Envie *"quero um atendente"* a qualquer momento, que te redireciono para um atendente humano. 😉`
+                });
                 break;
+            case 'reclamacao':
+                await sendTextMessage({
+                    text: `🥵 Entendo...`
+                });
+                await sendTextMessage({
+                    text: `Acalme-se... Para ajudar você, posso te sugerir a pedir um assistência humana.\nQue tal?`
+                });
+                await sendTextMessage({
+                    text: `Basta enviar *"Preciso de um atendente"* que te redireciono para esse suporte humano 😊`
+                });
+                break;
+            case 'primeiro_ano':
+                await sendTextMessage({ text: 'Temo o 1° ano no turno *Matutino*, com exelentes professores.\n\n*ATIVIDADES INCLUÍDAS:*\n- Robótica Infantil' });
+                await priceInquiryMessage();
+                break;
+            case 'segundo_ano':
+                await sendTextMessage({ text: 'Temo o 2° ano no turno *Matutino*, com exelentes professores.\n\n*ATIVIDADES INCLUÍDAS:*\n- Robótica Infantil' });
+                await priceInquiryMessage();
+                break;
+            case 'terceiro_ano':
+                await sendTextMessage({ text: 'Temo o 3° ano no turno *Matutino*, com exelentes professores.\n\n*ATIVIDADES INCLUÍDAS:*\n- Robótica Infantil' });
+                await priceInquiryMessage();
+                break;
+            case 'quarto_ano':
+                await sendTextMessage({ text: 'Temo o 4° ano no turno *Matutino*, com exelentes professores.\n\n*ATIVIDADES INCLUÍDAS:*\n- Robótica Infantil' });
+                await priceInquiryMessage();
+                break;
+            case 'quinto_ano':
+                await sendTextMessage({ text: 'Temo o 5° ano no turno *Matutino*, com exelentes professores.\n\n*ATIVIDADES INCLUÍDAS:*\n- Robótica Infantil' });
+                await priceInquiryMessage();
+                break;
+            case 'sexto_ano':
+                await sendTextMessage({ text: 'Temo o 6° ano no turno *Vespertino*, com exelentes professores.\n\n*ATIVIDADES INCLUÍDAS:*\n- Inglês' });
+                await priceInquiryMessage();
+                break;
+            case 'setimo_ano':
+                await sendTextMessage({ text: 'Temo o 7° ano no turno *Vespertino*, com exelentes professores.\n\n*ATIVIDADES INCLUÍDAS:*\n- Inglês' });
+                await priceInquiryMessage();
+                break;
+            case 'oitavo_ano':
+                await sendTextMessage({ text: 'Temo o 8° ano no turno *Vespertino*, com exelentes professores.\n\n*ATIVIDADES INCLUÍDAS:*\n- Inglês' });
+                await priceInquiryMessage();
+                break;
+            case 'nono_ano':
+                await sendTextMessage({ text: 'Temo o 9° ano no turno *Vespertino*, com exelentes professores.\n\n*ATIVIDADES INCLUÍDAS:*\n- Inglês' });
+                await priceInquiryMessage();
+                break;
+            case 'agradecimento':
+                await sendTextMessage({ text: 'Foi um prazer ajudar você, se precisar de mim, é só avisar, ta? 😊' })
+                break
+            case 'confirmacao':
+                await sendReact('😊');
+                break;
+            case 'horarios':
+                await sendTextMessage({ text: 'Funcionamos de Segunda à Sexta, das 8h às 17h30' })
+                break
+            case 'localizacao':
+                await sendTextMessage({ text: 'Estamos localizado na:' });
+                await sendTextMessage({ text: 'RUA CORONEL CATÃO, 00 CENTRO. 65485-000 Itapecuru Mirim - MA' });
+                await sendTextMessage({ text: 'Acesse: https://share.google/UPikuzTRsT9VXBksM' });
+                break;
+            case 'atendimento':
+                await askAttendant();
+                break;
+            case 'status_matriculas':
+                await sendTextMessage({ text: 'Sim!! Estamos com matrículas abertas. Para saber mais, posso sugerir uma assistência humana para você.' })
+                await sendTextMessage({ text: 'Se quiser uma assistência humana, basta enviar *"Quero uma assistência humana."*' })
+                break;
+            case 'limit_exceeded':
+                await sendTextMessage({ text: `O *${BOT_NAME}* teve um erro ao processar sua mesnagem, aguarde enquanto lhe redirecionamos para um atendimento humano.` })
+                await askAttendant();
+                await bot.sendMessage(`${DEVELOPER_PHONE_NUMBER}@s.whatsapp.net`, {
+                    text: `⚠️ *PROBLEMAS NO ${BOT_NAME.toUpperCase()}:*\n- Limite de requisições atingido`
+                });
+                break
+            case 'api_key_invalid':
+                await sendTextMessage({ text: `O *${BOT_NAME}* teve um erro ao processar sua mesnagem, aguarde enquanto lhe redirecionamos para um atendimento humano.` })
+                await askAttendant();
+                await bot.sendMessage(`${DEVELOPER_PHONE_NUMBER}@s.whatsapp.net`, {
+                    text: `⚠️ *PROBLEMAS NO ${BOT_NAME.toUpperCase()}:*\n- Chave API-KEy invalidada`
+                });
+                break
             default:
                 await sendTextMessage({ text: userIntent })
                 return
         }
 
-
+        const list = removeItemStringArray(waitingList, fromLid as string);
+        waitingList = list
     });
 }
 

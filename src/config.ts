@@ -7,6 +7,7 @@ export const __dirname = path.dirname(__filename);
 
 export const BOT_NAME = 'Leo-Bot';
 export const BOT_PHONE_NUMBER = '559885742985'; 
+export const DEVELOPER_PHONE_NUMBER = '559883528062'; 
 export const PREFIX = '!';
 
 export const BASE_PERSONALITY_MODEL_FILE_PATH = path.resolve(__dirname, 'utils', 'large-language-model', 'basic-personality.txt');

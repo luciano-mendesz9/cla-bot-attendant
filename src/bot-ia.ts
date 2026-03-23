@@ -47,6 +47,8 @@ async function start() {
             await bot.sendMessage(fromLid as string, {
                 text: '- *1 -* Muito Ruim 🫠\n- *2 -* Ruim 😥\n- *3 -* Neutro 😐\n- *4 -* Bom 😊\n- *5 -* Excelente 😄'
             });
+            const list = removeItemStringArray(waitingList, fromLid as string);
+            waitingList = list
             return;
         }
 
@@ -160,6 +162,8 @@ async function start() {
                     await sendTextMessage({ text: `O comando *${command.toUpperCase()}* não existe nas opções de comandos administrativo.\n\n> *Use:* _${PREFIX}menu_ para verificar possíveis comandos.` })
             }
 
+            const list = removeItemStringArray(waitingList, fromLid as string);
+            waitingList = list
             return;
         }
 
@@ -250,6 +254,9 @@ async function start() {
             await sendTextMessage({
                 text: 'Como posso te ajudar?\n\n> *Dica:* Envie uma mensagem por vez para facilitar o atendimento 😉'
             });
+
+            const list = removeItemStringArray(waitingList, fromLid as string);
+            waitingList = list
             return;
         }
 

@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "bot-ia-js": "node dist/bot-ia.js",
     "bot-ia": "tsx watch src/bot-ia.ts",
     "test": "tsx src/test.ts",
     "build": "tsc",

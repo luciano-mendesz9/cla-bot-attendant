@@ -38,9 +38,9 @@ atendimento -> quando quer falar com humano ou suporte direto
 horarios -> quando pergunta sobre horário de funcionamento
 localizacao -> quando pergunta endereço ou localização
 
-confirmacao -> quando usuário manda algo genérico, mas que parece uma confimação como: "tá bom", "ok", "tá legal"
+confirmacao -> quando usuário manda algo genérico, mas que parece uma confimação como: "tá bom", "ok", "tá legal", "blz", "beleza", "tranquilo"  etc
 
-generico -> quando não tem relação com escola ou não é possível identificar
+generico -> quando não tem relação com escola ou não é possível identificar o que significa ou se não parece com nenhuma das demais classificações
 
 IMPORTANTE:
 - Se o usuário mencionar um ano específico, priorize o ano (ex: "tem vaga no 3º ano?" -> terceiro_ano)
@@ -144,7 +144,8 @@ export class GeminiAI {
                 "mensagem_inicial",
                 "agradecimento",
                 "generico",
-                "api_key_invalid"
+                "api_key_invalid",
+                "confirmacao"
             ];
 
             if (!allowed.includes(normalized)) {
@@ -170,7 +171,7 @@ export class GeminiAI {
                 return "api_key_invalid";
             }
 
-            if(error?.status === 429){
+            if (error?.status === 429) {
                 return 'limit_exceeded'
             }
 

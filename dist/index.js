@@ -11,6 +11,7 @@ const cacheUserData = [];
 async function start() {
     const bot = await ConnectionBot();
     const DATA_CLIENTS = new UserDataFileManager();
+    console.log('🎧 Ouvindo eventos de mensagens...');
     bot.ev.on("messages.upsert", async ({ messages }) => {
         const msg = messages[0];
         if (!msg.message)
@@ -23,6 +24,7 @@ async function start() {
         const message = msg.message.extendedTextMessage?.text || msg.message.conversation;
         if (!fromJid && !fromLid || !message)
             return;
+        console.log('📩 Nova mensagem recebida!');
         if (msg.key.fromMe && (message?.toLocaleLowerCase() === 'bom dia' || message?.toLocaleLowerCase() === 'boa tarde' || message?.toLocaleLowerCase() === 'boa noite')) {
             const userCache = cacheUserData.find(u => u.lid === fromLid);
             DATA_CLIENTS.updateUserData(fromLid, { step: 'HUMAN_SERVING', username: userCache?.username || '' });
@@ -45,7 +47,8 @@ async function start() {
             await delay(500);
         };
         const sendTextMessage = async ({ text, reply }) => {
-            await typing();
+            //await typing();
+            delay(2000);
             const options = { text };
             if (reply) {
                 options.quoted = msg;
@@ -126,7 +129,7 @@ async function start() {
                 username: null
             });
             await sendImageMessage({
-                caption: `Olá, Eu sou *${BOT_NAME}*, o mais novo assistente virtual do Colégio Leonel Amorim 😉`,
+                caption: `Olá, Eu sou *${BOT_NAME}*, assistente virtual do Colégio Leonel Amorim 😉`,
                 filename: 'banner.png'
             });
             await sendTextMessage({

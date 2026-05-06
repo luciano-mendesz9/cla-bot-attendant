@@ -24,7 +24,7 @@ async function start() {
         const fromJid = msg.key.remoteJidAlt;
         const message = msg.message.extendedTextMessage?.text || msg.message.conversation;
         if (waitingList.includes(fromLid))
-            return;
+            return console.log('Usuário em espera...');
         if (!fromJid && !fromLid || !message)
             return;
         if (msg.key.fromMe && (message?.toLocaleLowerCase() === 'bom dia' || message?.toLocaleLowerCase() === 'boa tarde' || message?.toLocaleLowerCase() === 'boa noite')) {

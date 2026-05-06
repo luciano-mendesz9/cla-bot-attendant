@@ -14,6 +14,7 @@ async function start() {
     const bot = await ConnectionBot();
     const DATA_CLIENTS = new UserDataFileManager();
 
+    console.log('🎧 Ouvindo eventos de mensagens...');
 
 
     bot.ev.on("messages.upsert", async ({ messages }) => {
@@ -24,12 +25,14 @@ async function start() {
         const isGroup = !msg.key.remoteJid?.endsWith('@lid');
         if (isGroup) return;
 
+
         const fromLid = msg.key.remoteJid;
         const fromJid = msg.key.remoteJidAlt;
 
         const message = msg.message.extendedTextMessage?.text || msg.message.conversation;
 
         if (!fromJid && !fromLid || !message) return;
+        console.log('📩 Nova mensagem recebida!');
 
         if (msg.key.fromMe && (message?.toLocaleLowerCase() === 'bom dia' || message?.toLocaleLowerCase() === 'boa tarde' || message?.toLocaleLowerCase() === 'boa noite')) {
             const userCache = cacheUserData.find(u => u.lid === fromLid);
@@ -58,6 +61,7 @@ async function start() {
 
         const sendTextMessage = async ({ text, reply }: { text: string, reply?: boolean }) => {
             await typing();
+            //delay(2000);
             const options: any = { text }
             if (reply) {
                 options.quoted = msg
@@ -153,7 +157,7 @@ async function start() {
 
 
             await sendImageMessage({
-                caption: `Olá, Eu sou *${BOT_NAME}*, o mais novo assistente virtual do Colégio Leonel Amorim 😉`,
+                caption: `Olá, Eu sou *${BOT_NAME}*, assistente virtual do Colégio Leonel Amorim 😉`,
                 filename: 'banner.png'
             })
 
